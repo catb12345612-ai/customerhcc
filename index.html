@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Hyderabad Chai Company — Self-Ordering Kiosk</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root {
+    --bg: #0B0908; --card: #161311; --gold: #D4AF37; --gold-light: #F3E5AB; --gold-dark: #996515;
+    --text: #F8F5F0; --muted: #A69B8D; --border: rgba(212, 175, 55, 0.28); --ok: #22C55E; --err: #EF4444;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+  body { background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+  h1, h2, .brand-font { font-family: 'Cinzel', serif; }
+
+  /* FRONT FACE VIDEO ATTRACT SCREEN */
+  #attract-screen {
+    position: fixed; inset: 0; z-index: 9999; background: #000;
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+  }
+  #attract-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+  #hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+  .vignette { position: absolute; inset: 0; z-index: 2; background: linear-gradient(to top, rgba(11,9,8,0.96) 0%, rgba(11,9,8,0.22) 55%, rgba(11,9,8,0.65) 100%); }
+  .attract-box { position: relative; z-index: 3; text-align: center; padding: 36px 20px 48px; max-width: 720px; width: 100%; }
+  .crest {
+    width: 108px; height: 108px; margin: 0 auto 14px; border-radius: 50%; border: 2px solid var(--gold);
+    background: radial-gradient(circle, #251D17 0%, #0B0908 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: 0 0 36px rgba(212,175,55,0.45);
+  }
+  .tap-cta {
+    background: linear-gradient(135deg, var(--gold), #E8C766, var(--gold-dark)); color: #0B0908;
+    font-weight: 800; font-size: 1.3rem; letter-spacing: 1px; padding: 18px 46px; border-radius: 60px;
+    border: none; cursor: pointer; text-transform: uppercase; animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100%{transform:scale(1);box-shadow:0 10px 30px rgba(212,175,55,.45)} 50%{transform:scale(1.04);box-shadow:0 14px 44px rgba(212,175,55,.78)} }
+
+  /* HEADER */
+  header {
+    position: sticky; top: 0; z-index: 100; background: rgba(11,9,8,0.94); backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border); padding: 12px 22px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+  }
+  .brand-row { display: flex; align-items: center; gap: 12px; }
+  .badge { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; font-weight: 800; color: var(--gold); background: #1A1512; }
+  .hdr-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pill-btn { background: #1B1714; color: var(--gold-light); border: 1px solid var(--border); padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 0.82rem; cursor: pointer; text-decoration: none; }
+  .status-dot { font-size: 0.76rem; padding: 6px 10px; border-radius: 20px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.35); color: var(--ok); font-weight: 700; }
+
+  /* LAYOUT */
+  main { max-width: 1440px; margin: 0 auto; padding: 18px 22px 90px; display: grid; grid-template-columns: 1fr 380px; gap: 22px; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+
+  .cat-bar { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 14px; }
+  .cat-chip { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 10px 18px; border-radius: 30px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+  .cat-chip.active { background: var(--gold); color: #0B0908; }
+
+  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+  .item-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: transform .2s, border-color .2s; }
+  .item-card:hover { transform: translateY(-2px); border-color: var(--gold); }
+  .item-card.sold-out { opacity: 0.42; pointer-events: none; }
+  .sold-tag { position: absolute; top: 10px; right: 10px; background: var(--err); color: #fff; font-size: 0.7rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; }
+  .item-img { width: 100%; height: 132px; object-fit: cover; background: #221C18; }
+  .item-body { padding: 12px; }
+  .item-title { font-weight: 700; font-size: 0.96rem; margin-bottom: 3px; }
+  .item-cat { font-size: 0.76rem; color: var(--muted); margin-bottom: 10px; }
+  .item-foot { display: flex; justify-content: space-between; align-items: center; }
+  .price { font-weight: 800; font-size: 1.06rem; color: var(--gold); }
+  .add-btn { background: rgba(212,175,55,0.16); color: var(--gold-light); border: 1px solid var(--gold); padding: 6px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  .add-btn:hover { background: var(--gold); color: #0B0908; }
+
+  /* CART */
+  .cart-card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 18px; position: sticky; top: 82px; height: fit-content; }
+  .cart-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .qty-box { display: flex; align-items: center; gap: 8px; }
+  .qty-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: #231E1A; color: var(--gold); font-weight: 800; cursor: pointer; }
+  .type-btn { flex: 1; padding: 9px; border-radius: 10px; border: 1px solid var(--border); background: #1C1714; color: var(--muted); font-weight: 700; cursor: pointer; }
+  .type-btn.active { background: var(--gold); color: #0B0908; }
+  .pay-btn { width: 100%; margin-top: 14px; padding: 16px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #0B0908; font-weight: 800; font-size: 1.05rem; cursor: pointer; }
+  .pay-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* MODAL */
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.88); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
+  .modal.open { display: flex; }
+  .modal-card { background: #171310; border: 1px solid var(--gold); border-radius: 20px; max-width: 440px; width: 100%; padding: 24px; text-align: center; }
+
+  /* 80MM THERMAL PRINT (Fixed flex layout for clean item-price alignment) */
+  #print-area { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #print-area { display: block !important; visibility: visible !important; position: fixed; left: 0; top: 0; width: 80mm; padding: 4mm; background: #fff !important; color: #000 !important; font-family: monospace; }
+    #print-area * { visibility: visible !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- FRONT FACE VIDEO ATTRACT SCREEN -->
+<div id="attract-screen">
+  <video id="hero-video" autoplay loop muted playsinline>
+    <source src="hero-chai.mp4" type="video/mp4">
+  </video>
+  <div class="vignette"></div>
+  <div class="attract-box">
+    <div class="crest">
+      <span style="font-size:0.6rem;letter-spacing:2px;color:var(--gold-light);">EST. HYD</span>
+      <span class="brand-font" style="font-size:1.3rem;font-weight:800;color:var(--gold);">H.C.C</span>
+      <span style="font-size:0.56rem;color:var(--muted);">CHAI CO.</span>
+    </div>
+    <h1 style="font-size:2.2rem;color:var(--gold-light);margin-bottom:8px;text-shadow:0 4px 20px #000;">HYDERABAD CHAI COMPANY</h1>
+    <p style="color:#E2D9CE;font-size:1rem;margin-bottom:24px;">Authentic Zafrani Chai • Crispy Samosas • Fast Self-Ordering</p>
+    <button class="tap-cta" onclick="dismissAttract()">Tap Here to Order</button>
+    <div style="margin-top:24px;font-size:0.78rem;color:var(--gold-light);opacity:0.88;">
+      Developed by @syedzeeshaanali07 • High-Fledged Engineering & Digital Tech Solutions
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="brand-row">
+    <div class="badge">HCC</div>
+    <div>
+      <div class="brand-font" style="font-weight:800;font-size:1.08rem;color:var(--gold);">HYDERABAD CHAI COMPANY</div>
+      <div style="font-size:0.74rem;color:var(--muted);">0% Fee Dynamic UPI Kiosk • <span id="lang-label">English</span></div>
+    </div>
+  </div>
+  <div class="hdr-actions">
+    <span id="conn-badge" class="status-dot">● Connecting...</span>
+    <button class="pill-btn" onclick="toggleLang()">🌐 EN / తెలుగు / हिं</button>
+    <button class="pill-btn" onclick="showAttract()">🎬 Attract Video</button>
+    <a class="pill-btn" href="https://catb12345612-ai.github.io/Syed-Zeeshaan-Ali-High-Fledged-Engineering-And-Digital-Tech-Solutions-Site/" target="_blank">⚡ Developed by @syedzeeshaanali07</a>
+  </div>
+</header>
+
+<!-- KIOSK BODY -->
+<main>
+  <div>
+    <div class="cat-bar" id="cat-bar"></div>
+    <div class="menu-grid" id="menu-grid"></div>
+  </div>
+
+  <div class="cart-card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h2 style="font-size:1.18rem;color:var(--gold);">Your Order Tray</h2>
+      <button onclick="clearCart()" style="background:none;border:none;color:var(--err);cursor:pointer;font-size:0.8rem;font-weight:700;">Clear</button>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button id="t-dine" class="type-btn active" onclick="setOrderType('Dine-In')">☕ Dine-In</button>
+      <button id="t-take" class="type-btn" onclick="setOrderType('Takeaway')">🛍️ Takeaway</button>
+    </div>
+
+    <div id="cart-list" style="max-height:310px;overflow-y:auto;"></div>
+
+    <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);">
+      <div style="display:flex;justify-content:space-between;font-size:0.86rem;color:var(--muted);margin-bottom:6px;">
+        <span>UPI Gateway Fee (0% MDR)</span>
+        <span style="color:var(--ok);font-weight:700;">₹0.00</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:1.25rem;font-weight:800;color:var(--gold-light);">
+        <span>Total Payable</span>
+        <span id="cart-total">₹0</span>
+      </div>
+    </div>
+
+    <button id="pay-btn" class="pay-btn" disabled onclick="startPayment()">Pay via UPI & Print Token</button>
+  </div>
+</main>
+
+<!-- LOCKED PAYMENT MODAL -->
+<div id="pay-modal" class="modal">
+  <div class="modal-card">
+    <div id="st-pending">
+      <div style="color:var(--gold);font-weight:800;font-size:0.78rem;letter-spacing:1px;">LOCKED DYNAMIC UPI QR • 0% MDR</div>
+      <h2 id="m-amt" style="font-size:2rem;color:#fff;margin:6px 0;">₹0</h2>
+      <p style="color:var(--muted);font-size:0.84rem;margin-bottom:12px;">
+        Scan with PhonePe / GPay / Paytm.<br>Receipt prints <b>ONLY</b> after bank confirms payment.<br>
+        Time left: <b id="m-timer" style="color:var(--gold);">90s</b>
+      </p>
+      <div style="background:#fff;padding:14px;border-radius:16px;display:inline-block;margin-bottom:10px;">
+        <img id="m-qr" src="" alt="Dynamic UPI QR" style="width:195px;height:195px;display:block;">
+      </div>
+      <div style="font-size:0.76rem;color:var(--muted);margin-bottom:14px;">
+        Payee: <b style="color:var(--gold-light);">D GANI CAFE (Q227869939@ybl)</b><br>
+        Order ID: <span id="m-oid"></span>
+      </div>
+      <button onclick="cancelPayment()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.85rem;">Cancel Order</button>
+    </div>
+
+    <div id="st-failed" style="display:none;">
+      <div style="font-size:3rem;margin-bottom:8px;">⚠️</div>
+      <h2 style="color:var(--err);margin-bottom:8px;">Payment Not Confirmed</h2>
+      <p style="color:var(--muted);font-size:0.9rem;margin-bottom:18px;">
+        Payment failed or timed out. <b>No receipt was printed.</b> Please try again.
+      </p>
+      <button class="pay-btn" onclick="startPayment()">🔄 Do Again (Retry Payment)</button>
+      <button onclick="cancelPayment()" style="margin-top:12px;background:none;border:none;color:var(--muted);cursor:pointer;">Back to Menu</button>
+    </div>
+
+    <div id="st-success" style="display:none;">
+      <div style="font-size:3rem;margin-bottom:8px;">✅</div>
+      <h2 style="color:var(--ok);margin-bottom:6px;">Payment Verified!</h2>
+      <div style="font-size:1.5rem;font-weight:800;color:var(--gold);margin-bottom:8px;">Token #<span id="s-token">101</span></div>
+      <p style="color:var(--muted);font-size:0.86rem;margin-bottom:14px;">Your 80mm receipt is printing automatically.<br>Please collect your order when called on the TV screen.</p>
+      <a href="https://g.page/r/hyderabad-chai-company/review" target="_blank" style="display:inline-block;background:var(--gold);color:#000;font-weight:800;padding:10px 18px;border-radius:10px;text-decoration:none;font-size:0.84rem;">
+        ⭐ Tap to Rate 5-Stars on Google
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- 80MM THERMAL RECEIPT -->
+<div id="print-area">
+  <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:6px;margin-bottom:6px;">
+    <strong style="font-size:15px;">HYDERABAD CHAI COMPANY</strong><br>
+    <span style="font-size:11px;">Authentic Hyderabadi Chai & Snacks</span><br>
+    <strong style="font-size:20px;">TOKEN #<span id="pr-token">101</span></strong><br>
+    <span id="pr-meta" style="font-size:11px;"></span>
+  </div>
+  <div id="pr-items" style="font-size:12px;border-bottom:1px dashed #000;padding-bottom:6px;margin-bottom:6px;"></div>
+  <div style="font-size:13px;font-weight:bold;display:flex;justify-content:space-between;">
+    <span>PAID (UPI 0% FEE):</span>
+    <span id="pr-total">₹0</span>
+  </div>
+  <div id="pr-utr" style="font-size:10px;margin-top:4px;"></div>
+  <div style="text-align:center;font-size:10px;margin-top:8px;border-top:1px dashed #000;padding-top:6px;">
+    Thank You! Visit Again<br>
+    Developed by @syedzeeshaanali07
+  </div>
+</div>
+
+<script>
+  // LIVE FIREBASE CONFIG (hyderabadchaicompany-c245a)
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyAPHyMSTPIM49-ncoA5bj7qia-zzTppw98",
+    authDomain: "hyderabadchaicompany-c245a.firebaseapp.com",
+    databaseURL: "https://hyderabadchaicompany-c245a-default-rtdb.firebaseio.com",
+    projectId: "hyderabadchaicompany-c245a",
+    storageBucket: "hyderabadchaicompany-c245a.firebasestorage.app",
+    messagingSenderId: "236046114005",
+    appId: "1:236046114005:web:85b7dc600ed3bc9840965c",
+    measurementId: "G-L2DFJD97EG"
+  };
+
+  // VERIFIED PHONEPE BUSINESS MERCHANT VPA
+  const MERCHANT_UPI_ID = "Q227869939@ybl";
+  const MERCHANT_NAME   = "D GANI CAFE";
+
+  firebase.initializeApp(FIREBASE_CONFIG);
+  const db = firebase.database();
+
+  // Monitor Live Firebase Connection
+  db.ref('.info/connected').on('value', snap => {
+    const badge = document.getElementById('conn-badge');
+    if (snap.val() === true) {
+      badge.textContent = '🟢 Firebase Live Sync';
+      badge.style.color = '#22C55E';
+    } else {
+      badge.textContent = '🔴 Reconnecting...';
+      badge.style.color = '#EF4444';
+    }
+  });
+
+  // FULL HYDERABAD CHAI COMPANY MENU WITH IMAGES & RECIPES
+  const MENU = [
+    { id: 't1', cat: 'Chai & Coffee', name: 'Tea (Single)', te: 'టీ (సింగిల్)', hi: 'चाय (सिंगल)', price: 30, img: 'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=400&q=80', recipe: { milk: 0.08, teaPowder: 0.008, sugar: 0.01 } },
+    { id: 't2', cat: 'Chai & Coffee', name: 'Tea (Full)', te: 'టీ (ఫుల్)', hi: 'चाय (फुल)', price: 40, img: 'https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=400&q=80', recipe: { milk: 0.14, teaPowder: 0.012, sugar: 0.015 } },
+    { id: 't3', cat: 'Chai & Coffee', name: 'Special Tea', te: 'స్పెషల్ టీ', hi: 'स्पेशल चाय', price: 50, img: 'https://images.unsplash.com/photo-1594631252845-29fc4cc8cde9?w=400&q=80', recipe: { milk: 0.15, teaPowder: 0.015, sugar: 0.015 } },
+    { id: 't4', cat: 'Chai & Coffee', name: 'Masala Tea', te: 'మసాలా టీ', hi: 'मसाला चाय', price: 50, img: 'https://images.unsplash.com/photo-1567922045116-2a00fae2ed03?w=400&q=80', recipe: { milk: 0.14, teaPowder: 0.014, sugar: 0.015 } },
+    { id: 't5', cat: 'Chai & Coffee', name: 'Special Elaichi', te: 'స్పెషల్ ఇలాచీ టీ', hi: 'स्पेशल इलायची चाय', price: 60, img: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400&q=80', recipe: { milk: 0.15, teaPowder: 0.015, sugar: 0.015 } },
+    { id: 't6', cat: 'Chai & Coffee', name: 'Kesar Tea', te: 'కేసర్ టీ', hi: 'केसर चाय', price: 70, img: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?w=400&q=80', recipe: { milk: 0.15, teaPowder: 0.015, sugar: 0.015 } },
+    { id: 't7', cat: 'Chai & Coffee', name: 'Ginger Tea', te: 'అల్లం టీ', hi: 'अदरक चाय', price: 40, img: 'https://images.unsplash.com/photo-1597481499750-3e6b22637e12?w=400&q=80', recipe: { milk: 0.14, teaPowder: 0.012, sugar: 0.015 } },
+    { id: 't8', cat: 'Chai & Coffee', name: 'Lemon Tea', te: 'లెమన్ టీ', hi: 'लेमन टी', price: 40, img: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&q=80', recipe: { teaPowder: 0.008, sugar: 0.015 } },
+    { id: 't9', cat: 'Chai & Coffee', name: 'Lemon Tea Honey', te: 'లెమన్ హనీ టీ', hi: 'लेमन हनी टी', price: 50, img: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=400&q=80', recipe: { teaPowder: 0.008 } },
+    { id: 't10', cat: 'Chai & Coffee', name: 'Green Tea', te: 'గ్రీన్ టీ', hi: 'ग्रीन टी', price: 40, img: 'https://images.unsplash.com/photo-1627435601361-ec25f5b1d0e5?w=400&q=80', recipe: {} },
+    { id: 't11', cat: 'Chai & Coffee', name: 'Green Tea Honey', te: 'గ్రీన్ హనీ టీ', hi: 'ग्रीन हनी टी', price: 50, img: 'https://images.unsplash.com/photo-1627435601361-ec25f5b1d0e5?w=400&q=80', recipe: {} },
+    { id: 't12', cat: 'Chai & Coffee', name: 'Special Black Tea', te: 'బ్లాక్ టీ', hi: 'ब्लैक टी', price: 40, img: 'https://images.unsplash.com/photo-1576092762791-dd9e2220abd1?w=400&q=80', recipe: { teaPowder: 0.01, sugar: 0.012 } },
+    { id: 't13', cat: 'Chai & Coffee', name: 'Filter Coffee', te: 'కాఫీ', hi: 'कॉफी', price: 50, img: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&q=80', recipe: { milk: 0.15, sugar: 0.015 } },
+    { id: 't14', cat: 'Chai & Coffee', name: 'Flask (5-6 Cups)', te: 'చాయ్ ఫ్లాస్క్', hi: 'चाय फ्लास्क', price: 250, img: 'https://images.unsplash.com/photo-1563822249366-3efb23b8e0c9?w=400&q=80', recipe: { milk: 0.75, teaPowder: 0.06, sugar: 0.07 } },
+
+    { id: 's1', cat: 'Snacks & Bakery', name: 'Aloo Samosa', te: 'ఆలూ సమోసా', hi: 'आलू समोसा', price: 20, img: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&q=80', recipe: { samosaPieces: 1 } },
+    { id: 's2', cat: 'Snacks & Bakery', name: 'Vada Pav', te: 'వడ పావ్', hi: 'वड़ा पाव', price: 40, img: 'https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=400&q=80', recipe: { pavBuns: 1 } },
+    { id: 's3', cat: 'Snacks & Bakery', name: 'Mirchi Bhajji', te: 'మిర్చి బజ్జీ', hi: 'मिर्ची भज्जी', price: 40, img: 'https://images.unsplash.com/photo-1626132647523-66f5bf380027?w=400&q=80', recipe: {} },
+    { id: 's4', cat: 'Snacks & Bakery', name: 'Onion Pakoda', te: 'ఉల్లిపాయ పకోడీ', hi: 'प्याज पकोड़ा', price: 40, img: 'https://images.unsplash.com/photo-1601050690117-94f5f6fa8bd7?w=400&q=80', recipe: {} },
+    { id: 's5', cat: 'Snacks & Bakery', name: 'French Fries', te: 'ఫ్రెంచ్ ఫ్రైస్', hi: 'फ्रेंच फ्राइज़', price: 80, img: 'https://images.unsplash.com/photo-1576107232684-1279f390859f?w=400&q=80', recipe: {} },
+    { id: 's6', cat: 'Snacks & Bakery', name: 'Fudgy Brownie', te: 'ఫడ్జీ బ్రౌనీ', hi: 'फजी ब्राउनी', price: 70, img: 'https://images.unsplash.com/photo-1606313564200-e75d5e30476c?w=400&q=80', recipe: { brownies: 1 } },
+    { id: 's7', cat: 'Snacks & Bakery', name: 'Pani Puri', te: 'పానీ పూరి', hi: 'पानी पूरी', price: 50, img: 'https://images.unsplash.com/photo-1601050690294-397f3c324515?w=400&q=80', recipe: {} },
+
+    { id: 'g1', cat: 'Sandwiches & Burgers', name: 'Paneer Tikka Sandwich', te: 'పనీర్ టిక్కా శాండ్‌విచ్', hi: 'पनीर टिक्का सैंडविच', price: 99, img: 'https://images.unsplash.com/photo-1528735602780-2552fd46c7af?w=400&q=80', recipe: { breadSlices: 2 } },
+    { id: 'g2', cat: 'Sandwiches & Burgers', name: 'Veg Grill Sandwich', te: 'వెజ్ గ్రిల్ శాండ్‌విచ్', hi: 'वेज ग्रिल सैंडविच', price: 99, img: 'https://images.unsplash.com/photo-1539252554453-80ab65ce3586?w=400&q=80', recipe: { breadSlices: 2 } },
+    { id: 'g3', cat: 'Sandwiches & Burgers', name: 'Cheese Grill Sandwich', te: 'చీజ్ గ్రిల్ శాండ్‌విచ్', hi: 'चीज़ ग्रिल सैंडविच', price: 80, img: 'https://images.unsplash.com/photo-1528736235302-52922df5c122?w=400&q=80', recipe: { breadSlices: 2 } },
+    { id: 'g4', cat: 'Sandwiches & Burgers', name: 'Mint Sandwich', te: 'మింట్ శాండ్‌విచ్', hi: 'मिंट सैंडविच', price: 80, img: 'https://images.unsplash.com/photo-1554433607-66b5efe9d304?w=400&q=80', recipe: { breadSlices: 2 } },
+    { id: 'g5', cat: 'Sandwiches & Burgers', name: 'Spicy Paneer Sandwich', te: 'స్పైసీ పనీర్ శాండ్‌విచ్', hi: 'स्पाइसी पनीर सैंडविच', price: 110, img: 'https://images.unsplash.com/photo-1553909489-cd47e0907980?w=400&q=80', recipe: { breadSlices: 2 } },
+    { id: 'g6', cat: 'Sandwiches & Burgers', name: 'Veg Burger', te: 'వెజ్ బర్గర్', hi: 'वेज बर्गर', price: 120, img: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=80', recipe: { pavBuns: 1 } },
+    { id: 'g7', cat: 'Sandwiches & Burgers', name: 'Paneer Burger', te: 'పనీర్ బర్గర్', hi: 'पनीर बर्गर', price: 150, img: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&q=80', recipe: { pavBuns: 1 } },
+
+    { id: 'b1', cat: 'Tiffins & Bowls', name: 'Idly', te: 'ఇడ్లీ', hi: 'इडली', price: 40, img: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?w=400&q=80', recipe: {} },
+    { id: 'b2', cat: 'Tiffins & Bowls', name: 'Mumbai Poha', te: 'ముంబై పోహా', hi: 'मुंबई पोहा', price: 90, img: 'https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?w=400&q=80', recipe: {} },
+    { id: 'b3', cat: 'Tiffins & Bowls', name: 'Sabudana Khichdi', te: 'సగ్గుబియ్యం కిచిడీ', hi: 'साबूदाना खिचड़ी', price: 110, img: 'https://images.unsplash.com/photo-1631452180519-c014fe946bc7?w=400&q=80', recipe: {} },
+    { id: 'b4', cat: 'Tiffins & Bowls', name: 'Ragi Upma', te: 'రాగి ఉప్మా', hi: 'रागी उपमा', price: 120, img: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&q=80', recipe: {} },
+    { id: 'b5', cat: 'Tiffins & Bowls', name: 'Masala Oats', te: 'మసాలా ఓట్స్', hi: 'मसाला ओट्स', price: 90, img: 'https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=400&q=80', recipe: {} },
+    { id: 'b6', cat: 'Tiffins & Bowls', name: 'Granola Oats', te: 'గ్రానోలా ఓట్స్', hi: 'ग्रैनोला ओट्स', price: 90, img: 'https://images.unsplash.com/photo-1517673132405-a56a62b18caf?w=400&q=80', recipe: {} },
+    { id: 'b7', cat: 'Tiffins & Bowls', name: 'Chole Kulcha', te: 'ఛోలే కుల్చా', hi: 'छोले कुलचे', price: 100, img: 'https://images.unsplash.com/photo-1626132647523-66f5bf380027?w=400&q=80', recipe: {} },
+    { id: 'b8', cat: 'Tiffins & Bowls', name: 'Aloo Paratha', te: 'ఆలూ పరాఠా', hi: 'आलू पराठा', price: 80, img: 'https://images.unsplash.com/photo-1626074353765-517a681e40be?w=400&q=80', recipe: {} },
+    { id: 'b9', cat: 'Tiffins & Bowls', name: 'Paneer Paratha', te: 'పనీర్ పరాఠా', hi: 'पनीर पराठा', price: 80, img: 'https://images.unsplash.com/photo-1626074353765-517a681e40be?w=400&q=80', recipe: {} },
+    { id: 'b10', cat: 'Tiffins & Bowls', name: 'Cut Fruit', te: 'కట్ ఫ్రూట్', hi: 'कट फ्रूट', price: 100, img: 'https://images.unsplash.com/photo-1490474418585-ba9bad8fd0ea?w=400&q=80', recipe: {} }
+  ];
+
+  let stockStatus = {};
+  let cart = {};
+  let activeCat = 'All';
+  let orderType = 'Dine-In';
+  let lang = 'en';
+  let currentOrderId = null;
+  let activeOrderRef = null;
+  let payTimer = null;
+  let idleTimer = null;
+  let alreadyPrintedOrderId = null;
+
+  // Listen for live Sold-Out toggles from Staff KDS
+  db.ref('stockStatus').on('value', snap => {
+    stockStatus = snap.val() || {};
+    renderMenu();
+  });
+
+  function resetIdleTimer() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      if (!document.getElementById('pay-modal').classList.contains('open')) {
+        cart = {};
+        renderCart();
+        showAttract();
+      }
+    }, 60000);
+  }
+  ['click', 'touchstart'].forEach(ev => document.addEventListener(ev, resetIdleTimer));
+
+  function dismissAttract() { document.getElementById('attract-screen').classList.add('hidden'); resetIdleTimer(); }
+  function showAttract() { document.getElementById('attract-screen').classList.remove('hidden'); }
+
+  function toggleLang() {
+    lang = lang === 'en' ? 'te' : (lang === 'te' ? 'hi' : 'en');
+    document.getElementById('lang-label').textContent = lang === 'en' ? 'English' : (lang === 'te' ? 'తెలుగు' : 'हिन्दी');
+    renderMenu(); renderCart();
+  }
+  function getName(m) { return lang === 'te' ? m.te : (lang === 'hi' ? m.hi : m.name); }
+
+  function renderCats() {
+    const cats = ['All', ...new Set(MENU.map(m => m.cat))];
+    document.getElementById('cat-bar').innerHTML = cats.map(c =>
+      `<button class="cat-chip ${activeCat === c ? 'active' : ''}" onclick="setCat('${c}')">${c}</button>`
+    ).join('');
+  }
+  function setCat(c) { activeCat = c; renderCats(); renderMenu(); }
+
+  function renderMenu() {
+    const list = activeCat === 'All' ? MENU : MENU.filter(m => m.cat === activeCat);
+    document.getElementById('menu-grid').innerHTML = list.map(m => {
+      const soldOut = stockStatus[m.id] === false;
+      return `
+        <div class="item-card ${soldOut ? 'sold-out' : ''}">
+          ${soldOut ? '<span class="sold-tag">SOLD OUT</span>' : ''}
+          <img class="item-img" src="${m.img}" alt="${m.name}" loading="lazy">
+          <div class="item-body">
+            <div class="item-title">${getName(m)}</div>
+            <div class="item-cat">${m.cat}</div>
+            <div class="item-foot">
+              <span class="price">₹${m.price}</span>
+              <button class="add-btn" onclick="addCart('${m.id}')">+ Add</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function addCart(id) { cart[id] = (cart[id] || 0) + 1; renderCart(); }
+  function chgQty(id, d) { cart[id] = (cart[id] || 0) + d; if (cart[id] <= 0) delete cart[id]; renderCart(); }
+  function clearCart() { cart = {}; renderCart(); }
+  function setOrderType(t) {
+    orderType = t;
+    document.getElementById('t-dine').classList.toggle('active', t === 'Dine-In');
+    document.getElementById('t-take').classList.toggle('active', t === 'Takeaway');
+  }
+  function getTotal() {
+    return Object.entries(cart).reduce((s, [id, q]) => {
+      const m = MENU.find(x => x.id === id);
+      return s + (m ? m.price * q : 0);
+    }, 0);
+  }
+
+  function renderCart() {
+    const entries = Object.entries(cart);
+    const total = getTotal();
+    document.getElementById('cart-total').textContent = '₹' + total;
+    document.getElementById('pay-btn').disabled = entries.length === 0;
+    if (!entries.length) {
+      document.getElementById('cart-list').innerHTML = `<div style="text-align:center;color:var(--muted);padding:28px 8px;">Tap any Chai or Snack to start</div>`;
+      return;
+    }
+    document.getElementById('cart-list').innerHTML = entries.map(([id, q]) => {
+      const m = MENU.find(x => x.id === id);
+      return `
+        <div class="cart-row">
+          <div>
+            <div style="font-weight:700;font-size:0.9rem;">${getName(m)}</div>
+            <div style="font-size:0.78rem;color:var(--gold);">₹${m.price} × ${q} = ₹${m.price * q}</div>
+          </div>
+          <div class="qty-box">
+            <button class="qty-btn" onclick="chgQty('${id}',-1)">-</button>
+            <span style="font-weight:700;">${q}</span>
+            <button class="qty-btn" onclick="chgQty('${id}',1)">+</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function startPayment() {
+    const total = getTotal();
+    if (total <= 0) return;
+
+    currentOrderId = 'HCC' + Date.now().toString().slice(-7);
+    alreadyPrintedOrderId = null;
+
+    const itemsPayload = Object.entries(cart).map(([id, qty]) => {
+      const m = MENU.find(x => x.id === id);
+      return { id: m.id, name: m.name, qty, price: m.price, subtotal: m.price * qty, recipe: m.recipe || {} };
+    });
+
+    const orderData = {
+      orderId: currentOrderId,
+      date: new Date().toISOString().slice(0, 10),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      createdAt: Date.now(),
+      type: orderType,
+      items: itemsPayload,
+      total: total,
+      status: 'PENDING_PAYMENT',
+      kdsStatus: 'LOCKED'
+    };
+
+    const upiUri = `upi://pay?pa=${encodeURIComponent(MERCHANT_UPI_ID)}&pn=${encodeURIComponent(MERCHANT_NAME)}&am=${total.toFixed(2)}&cu=INR&tr=${encodeURIComponent(currentOrderId)}&tn=${encodeURIComponent('HCC Order ' + currentOrderId)}`;
+    document.getElementById('m-qr').src = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiUri)}`;
+    document.getElementById('m-amt').textContent = '₹' + total;
+    document.getElementById('m-oid').textContent = currentOrderId;
+
+    document.getElementById('st-pending').style.display = 'block';
+    document.getElementById('st-failed').style.display = 'none';
+    document.getElementById('st-success').style.display = 'none';
+    document.getElementById('pay-modal').classList.add('open');
+
+    if (activeOrderRef) activeOrderRef.off();
+    activeOrderRef = db.ref('orders/' + currentOrderId);
+    activeOrderRef.set(orderData);
+    activeOrderRef.on('value', snap => {
+      const val = snap.val();
+      if (!val) return;
+      if (val.status === 'PAID' && alreadyPrintedOrderId !== currentOrderId) {
+        alreadyPrintedOrderId = currentOrderId;
+        handleVerifiedPayment(val);
+      } else if (val.status === 'FAILED') {
+        showFailedState();
+      }
+    });
+
+    let sec = 90;
+    document.getElementById('m-timer').textContent = sec + 's';
+    clearInterval(payTimer);
+    payTimer = setInterval(() => {
+      sec--;
+      document.getElementById('m-timer').textContent = sec + 's';
+      if (sec <= 0) {
+        clearInterval(payTimer);
+        if (activeOrderRef) activeOrderRef.update({ status: 'FAILED', failReason: 'Timeout' });
+        showFailedState();
+      }
+    }, 1000);
+  }
+
+  function handleVerifiedPayment(order) {
+    clearInterval(payTimer);
+    if (activeOrderRef) activeOrderRef.off();
+
+    // Atomic per-ingredient deduction (zero race conditions during rush hour)
+    if (Array.isArray(order.items)) {
+      const deductTotals = {};
+      order.items.forEach(it => {
+        if (it.recipe) {
+          Object.entries(it.recipe).forEach(([k, amt]) => {
+            deductTotals[k] = (deductTotals[k] || 0) + (amt * it.qty);
+          });
+        }
+      });
+      Object.entries(deductTotals).forEach(([k, used]) => {
+        db.ref('inventory/' + k + '/qty').transaction(cur => {
+          if (cur === null) return cur;
+          return Math.max(0, +(cur - used).toFixed(3));
+        });
+      });
+    }
+
+    // Populate 80mm Receipt & Trigger Silent Print
+    document.getElementById('pr-token').textContent = order.token || '101';
+    document.getElementById('pr-meta').textContent = `${order.date} ${order.time} | ${order.type}`;
+    document.getElementById('pr-items').innerHTML = (order.items || []).map(i =>
+      `<div style="display:flex;justify-content:space-between;"><span>${i.qty}x ${i.name}</span><span>₹${i.subtotal}</span></div>`
+    ).join('');
+    document.getElementById('pr-total').textContent = '₹' + order.total;
+    document.getElementById('pr-utr').textContent = `Order: ${order.orderId} | UTR: ${order.utr || 'VERIFIED'}`;
+
+    document.getElementById('st-pending').style.display = 'none';
+    document.getElementById('st-success').style.display = 'block';
+    document.getElementById('s-token').textContent = order.token || '101';
+
+    setTimeout(() => { window.print(); }, 250);
+    cart = {};
+    renderCart();
+    setTimeout(() => { document.getElementById('pay-modal').classList.remove('open'); }, 5500);
+  }
+
+  function showFailedState() {
+    clearInterval(payTimer);
+    if (activeOrderRef) activeOrderRef.off();
+    document.getElementById('st-pending').style.display = 'none';
+    document.getElementById('st-failed').style.display = 'block';
+  }
+
+  function cancelPayment() {
+    clearInterval(payTimer);
+    if (activeOrderRef) {
+      activeOrderRef.off();
+      activeOrderRef.update({ status: 'CANCELLED' });
+    }
+    document.getElementById('pay-modal').classList.remove('open');
+  }
+
+  renderCats(); renderMenu(); renderCart();
+</script>
+</body>
+</html>
