@@ -9,86 +9,160 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
   :root {
-    --bg: #0B0908; --card: #161311; --gold: #D4AF37; --gold-light: #F3E5AB; --gold-dark: #996515;
-    --text: #F8F5F0; --muted: #A69B8D; --border: rgba(212, 175, 55, 0.28); --ok: #22C55E; --err: #EF4444;
+    --bg: #FAF8F5;
+    --surface: #FFFFFF;
+    --surface-soft: #F3EFE8;
+    --gold: #C89B3C;
+    --gold-dark: #9A721E;
+    --gold-soft: rgba(200, 155, 60, 0.14);
+    --text: #1C1917;
+    --muted: #6B6258;
+    --border: #E7E0D4;
+    --ok: #16A34A;
+    --err: #DC2626;
+    --shadow: 0 8px 24px rgba(28, 25, 23, 0.06);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
   body { background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
   h1, h2, .brand-font { font-family: 'Cinzel', serif; }
 
-  /* FRONT FACE VIDEO ATTRACT SCREEN */
+  /* FRONT FACE VIDEO + PURE CSS CINEMATIC FALLBACK ATTRACT SCREEN */
   #attract-screen {
-    position: fixed; inset: 0; z-index: 9999; background: #000;
+    position: fixed; inset: 0; z-index: 9999;
+    background: radial-gradient(circle at 50% 35%, #FFFDF9 0%, #F3ECE0 55%, #E6D8C0 100%);
     display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
     transition: opacity 0.5s ease, visibility 0.5s ease;
+    overflow: hidden;
   }
   #attract-screen.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-  #hero-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
-  .vignette { position: absolute; inset: 0; z-index: 2; background: linear-gradient(to top, rgba(11,9,8,0.96) 0%, rgba(11,9,8,0.22) 55%, rgba(11,9,8,0.65) 100%); }
-  .attract-box { position: relative; z-index: 3; text-align: center; padding: 36px 20px 48px; max-width: 720px; width: 100%; }
+  #hero-video {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;
+  }
+  /* Pure CSS Animated Steam & Golden Shimmer (shows if video is loading or missing) */
+  .css-chai-stage {
+    position: absolute; inset: 0; z-index: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding-bottom: 160px;
+  }
+  .steam-wrap { display: flex; gap: 14px; margin-bottom: 8px; }
+  .steam-line {
+    width: 6px; height: 48px; border-radius: 99px;
+    background: linear-gradient(to top, rgba(200,155,60,0.45), transparent);
+    animation: rise 2.4s infinite ease-in-out;
+  }
+  .steam-line:nth-child(2) { animation-delay: 0.6s; height: 60px; }
+  .steam-line:nth-child(3) { animation-delay: 1.2s; }
+  @keyframes rise {
+    0% { transform: translateY(14px) scaleY(0.7); opacity: 0; }
+    50% { opacity: 0.9; }
+    100% { transform: translateY(-28px) scaleY(1.2); opacity: 0; }
+  }
+  .vignette {
+    position: absolute; inset: 0; z-index: 2;
+    background: linear-gradient(to top, rgba(255,253,249,0.97) 0%, rgba(255,253,249,0.35) 50%, rgba(255,253,249,0.18) 100%);
+  }
+  .attract-box { position: relative; z-index: 3; text-align: center; padding: 36px 20px 44px; max-width: 720px; width: 100%; }
   .crest {
-    width: 108px; height: 108px; margin: 0 auto 14px; border-radius: 50%; border: 2px solid var(--gold);
-    background: radial-gradient(circle, #251D17 0%, #0B0908 100%);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    box-shadow: 0 0 36px rgba(212,175,55,0.45);
+    width: 108px; height: 108px; margin: 0 auto 14px; border-radius: 50%; border: 2.5px solid var(--gold);
+    background: #FFFFFF; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: 0 12px 32px rgba(200, 155, 60, 0.28);
   }
   .tap-cta {
-    background: linear-gradient(135deg, var(--gold), #E8C766, var(--gold-dark)); color: #0B0908;
-    font-weight: 800; font-size: 1.3rem; letter-spacing: 1px; padding: 18px 46px; border-radius: 60px;
-    border: none; cursor: pointer; text-transform: uppercase; animation: pulse 2s infinite;
+    background: linear-gradient(135deg, var(--gold), #DFB658, var(--gold-dark)); color: #FFFFFF;
+    font-weight: 800; font-size: 1.25rem; letter-spacing: 1px; padding: 18px 48px; border-radius: 60px;
+    border: none; cursor: pointer; text-transform: uppercase;
+    box-shadow: 0 12px 28px rgba(154, 114, 30, 0.35);
+    animation: pulse 2s infinite;
   }
-  @keyframes pulse { 0%,100%{transform:scale(1);box-shadow:0 10px 30px rgba(212,175,55,.45)} 50%{transform:scale(1.04);box-shadow:0 14px 44px rgba(212,175,55,.78)} }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.04)} }
 
   /* HEADER */
   header {
-    position: sticky; top: 0; z-index: 100; background: rgba(11,9,8,0.94); backdrop-filter: blur(14px);
+    position: sticky; top: 0; z-index: 100; background: rgba(255, 255, 255, 0.94); backdrop-filter: blur(14px);
     border-bottom: 1px solid var(--border); padding: 12px 22px;
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+    box-shadow: 0 2px 12px rgba(28,25,23,0.04);
   }
   .brand-row { display: flex; align-items: center; gap: 12px; }
-  .badge { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--gold); display: flex; align-items: center; justify-content: center; font-family: 'Cinzel', serif; font-weight: 800; color: var(--gold); background: #1A1512; }
+  .badge {
+    width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cinzel', serif; font-weight: 800; color: var(--gold-dark); background: var(--surface-soft);
+  }
   .hdr-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .pill-btn { background: #1B1714; color: var(--gold-light); border: 1px solid var(--border); padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 0.82rem; cursor: pointer; text-decoration: none; }
-  .status-dot { font-size: 0.76rem; padding: 6px 10px; border-radius: 20px; background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.35); color: var(--ok); font-weight: 700; }
+  .pill-btn {
+    background: var(--surface); color: var(--text); border: 1px solid var(--border);
+    padding: 8px 14px; border-radius: 10px; font-weight: 700; font-size: 0.82rem;
+    cursor: pointer; text-decoration: none; transition: all 0.2s;
+  }
+  .pill-btn:hover { border-color: var(--gold); background: var(--surface-soft); }
+  .status-dot {
+    font-size: 0.76rem; padding: 6px 12px; border-radius: 20px;
+    background: rgba(22,163,74,0.1); border: 1px solid rgba(22,163,74,0.3); color: var(--ok); font-weight: 700;
+  }
 
   /* LAYOUT */
-  main { max-width: 1440px; margin: 0 auto; padding: 18px 22px 90px; display: grid; grid-template-columns: 1fr 380px; gap: 22px; }
+  main { max-width: 1440px; margin: 0 auto; padding: 20px 22px 90px; display: grid; grid-template-columns: 1fr 390px; gap: 24px; }
   @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
 
   .cat-bar { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 12px; margin-bottom: 14px; }
-  .cat-chip { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 10px 18px; border-radius: 30px; font-weight: 700; cursor: pointer; white-space: nowrap; }
-  .cat-chip.active { background: var(--gold); color: #0B0908; }
+  .cat-chip {
+    background: var(--surface); border: 1px solid var(--border); color: var(--text);
+    padding: 10px 20px; border-radius: 30px; font-weight: 700; cursor: pointer; white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  }
+  .cat-chip.active { background: var(--text); color: #FFFFFF; border-color: var(--text); }
 
-  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
-  .item-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; position: relative; transition: transform .2s, border-color .2s; }
-  .item-card:hover { transform: translateY(-2px); border-color: var(--gold); }
-  .item-card.sold-out { opacity: 0.42; pointer-events: none; }
+  .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(205px, 1fr)); gap: 16px; }
+  .item-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+    overflow: hidden; display: flex; flex-direction: column; justify-content: space-between;
+    position: relative; box-shadow: var(--shadow); transition: transform .2s, border-color .2s;
+  }
+  .item-card:hover { transform: translateY(-3px); border-color: var(--gold); }
+  .item-card.sold-out { opacity: 0.45; pointer-events: none; }
   .sold-tag { position: absolute; top: 10px; right: 10px; background: var(--err); color: #fff; font-size: 0.7rem; font-weight: 800; padding: 4px 8px; border-radius: 6px; }
-  .item-img { width: 100%; height: 132px; object-fit: cover; background: #221C18; }
-  .item-body { padding: 12px; }
-  .item-title { font-weight: 700; font-size: 0.96rem; margin-bottom: 3px; }
+  .item-img { width: 100%; height: 138px; object-fit: cover; background: var(--surface-soft); }
+  .item-body { padding: 13px; }
+  .item-title { font-weight: 700; font-size: 0.96rem; margin-bottom: 3px; color: var(--text); }
   .item-cat { font-size: 0.76rem; color: var(--muted); margin-bottom: 10px; }
   .item-foot { display: flex; justify-content: space-between; align-items: center; }
-  .price { font-weight: 800; font-size: 1.06rem; color: var(--gold); }
-  .add-btn { background: rgba(212,175,55,0.16); color: var(--gold-light); border: 1px solid var(--gold); padding: 6px 14px; border-radius: 8px; font-weight: 700; cursor: pointer; }
-  .add-btn:hover { background: var(--gold); color: #0B0908; }
+  .price { font-weight: 800; font-size: 1.08rem; color: var(--gold-dark); }
+  .add-btn {
+    background: var(--surface-soft); color: var(--text); border: 1px solid var(--gold);
+    padding: 6px 15px; border-radius: 9px; font-weight: 800; cursor: pointer;
+  }
+  .add-btn:hover { background: var(--gold); color: #FFFFFF; }
 
   /* CART */
-  .cart-card { background: var(--card); border: 1px solid var(--border); border-radius: 18px; padding: 18px; position: sticky; top: 82px; height: fit-content; }
-  .cart-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .cart-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+    padding: 20px; position: sticky; top: 82px; height: fit-content; box-shadow: var(--shadow);
+  }
+  .cart-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
   .qty-box { display: flex; align-items: center; gap: 8px; }
-  .qty-btn { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border); background: #231E1A; color: var(--gold); font-weight: 800; cursor: pointer; }
-  .type-btn { flex: 1; padding: 9px; border-radius: 10px; border: 1px solid var(--border); background: #1C1714; color: var(--muted); font-weight: 700; cursor: pointer; }
-  .type-btn.active { background: var(--gold); color: #0B0908; }
-  .pay-btn { width: 100%; margin-top: 14px; padding: 16px; border-radius: 12px; border: none; background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #0B0908; font-weight: 800; font-size: 1.05rem; cursor: pointer; }
-  .pay-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .qty-btn { width: 28px; height: 28px; border-radius: 7px; border: 1px solid var(--border); background: var(--surface-soft); color: var(--text); font-weight: 800; cursor: pointer; }
+  .type-btn { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-soft); color: var(--muted); font-weight: 700; cursor: pointer; }
+  .type-btn.active { background: var(--text); color: #FFFFFF; border-color: var(--text); }
+
+  /* AI SMART UPSELL BOX */
+  .ai-upsell {
+    margin-top: 12px; padding: 10px 12px; border-radius: 12px;
+    background: linear-gradient(135deg, #FFFBF0, #F7EFE0); border: 1px dashed var(--gold);
+    display: none; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .pay-btn {
+    width: 100%; margin-top: 14px; padding: 16px; border-radius: 12px; border: none;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #FFFFFF;
+    font-weight: 800; font-size: 1.05rem; cursor: pointer; box-shadow: 0 8px 20px rgba(154,114,30,0.28);
+  }
+  .pay-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
 
   /* MODAL */
-  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.88); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
+  .modal { position: fixed; inset: 0; background: rgba(28, 25, 23, 0.72); backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 16px; }
   .modal.open { display: flex; }
-  .modal-card { background: #171310; border: 1px solid var(--gold); border-radius: 20px; max-width: 440px; width: 100%; padding: 24px; text-align: center; }
+  .modal-card { background: #FFFFFF; border: 2px solid var(--gold); border-radius: 22px; max-width: 440px; width: 100%; padding: 26px; text-align: center; box-shadow: 0 24px 60px rgba(0,0,0,0.2); }
 
-  /* 80MM THERMAL PRINT (Fixed flex layout for clean item-price alignment) */
+  /* 80MM THERMAL PRINT */
   #print-area { display: none; }
   @media print {
     body * { visibility: hidden; }
@@ -99,22 +173,27 @@
 </head>
 <body>
 
-<!-- FRONT FACE VIDEO ATTRACT SCREEN -->
+<!-- FRONT FACE VIDEO + ANIMATED FALLBACK ATTRACT SCREEN -->
 <div id="attract-screen">
-  <video id="hero-video" autoplay loop muted playsinline>
+  <div class="css-chai-stage">
+    <div class="steam-wrap"><div class="steam-line"></div><div class="steam-line"></div><div class="steam-line"></div></div>
+    <div style="font-size:4.2rem;">☕</div>
+  </div>
+  <video id="hero-video" autoplay loop muted playsinline onerror="this.style.display='none'">
     <source src="hero-chai.mp4" type="video/mp4">
+    <source src="video_1.mp4" type="video/mp4">
   </video>
   <div class="vignette"></div>
   <div class="attract-box">
     <div class="crest">
-      <span style="font-size:0.6rem;letter-spacing:2px;color:var(--gold-light);">EST. HYD</span>
-      <span class="brand-font" style="font-size:1.3rem;font-weight:800;color:var(--gold);">H.C.C</span>
-      <span style="font-size:0.56rem;color:var(--muted);">CHAI CO.</span>
+      <span style="font-size:0.6rem;letter-spacing:2px;color:var(--gold-dark);font-weight:700;">EST. HYD</span>
+      <span class="brand-font" style="font-size:1.35rem;font-weight:800;color:var(--text);">H.C.C</span>
+      <span style="font-size:0.56rem;color:var(--muted);font-weight:700;">CHAI CO.</span>
     </div>
-    <h1 style="font-size:2.2rem;color:var(--gold-light);margin-bottom:8px;text-shadow:0 4px 20px #000;">HYDERABAD CHAI COMPANY</h1>
-    <p style="color:#E2D9CE;font-size:1rem;margin-bottom:24px;">Authentic Zafrani Chai • Crispy Samosas • Fast Self-Ordering</p>
+    <h1 style="font-size:2.2rem;color:var(--text);margin-bottom:8px;">HYDERABAD CHAI COMPANY</h1>
+    <p style="color:var(--muted);font-size:1rem;font-weight:600;margin-bottom:24px;">Authentic Zafrani Chai • Crispy Samosas • Zero-Queue Self Ordering</p>
     <button class="tap-cta" onclick="dismissAttract()">Tap Here to Order</button>
-    <div style="margin-top:24px;font-size:0.78rem;color:var(--gold-light);opacity:0.88;">
+    <div style="margin-top:22px;font-size:0.78rem;color:var(--gold-dark);font-weight:700;">
       Developed by @syedzeeshaanali07 • High-Fledged Engineering & Digital Tech Solutions
     </div>
   </div>
@@ -125,7 +204,7 @@
   <div class="brand-row">
     <div class="badge">HCC</div>
     <div>
-      <div class="brand-font" style="font-weight:800;font-size:1.08rem;color:var(--gold);">HYDERABAD CHAI COMPANY</div>
+      <div class="brand-font" style="font-weight:800;font-size:1.08rem;color:var(--text);">HYDERABAD CHAI COMPANY</div>
       <div style="font-size:0.74rem;color:var(--muted);">0% Fee Dynamic UPI Kiosk • <span id="lang-label">English</span></div>
     </div>
   </div>
@@ -146,7 +225,7 @@
 
   <div class="cart-card">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-      <h2 style="font-size:1.18rem;color:var(--gold);">Your Order Tray</h2>
+      <h2 style="font-size:1.18rem;color:var(--text);">Your Order Tray</h2>
       <button onclick="clearCart()" style="background:none;border:none;color:var(--err);cursor:pointer;font-size:0.8rem;font-weight:700;">Clear</button>
     </div>
 
@@ -155,16 +234,25 @@
       <button id="t-take" class="type-btn" onclick="setOrderType('Takeaway')">🛍️ Takeaway</button>
     </div>
 
-    <div id="cart-list" style="max-height:310px;overflow-y:auto;"></div>
+    <div id="cart-list" style="max-height:290px;overflow-y:auto;"></div>
+
+    <!-- AI PAIRING UPSELL -->
+    <div id="ai-upsell-box" class="ai-upsell">
+      <div>
+        <div style="font-size:0.7rem;font-weight:800;color:var(--gold-dark);letter-spacing:0.5px;">✨ AI RECOMMENDED PAIRING</div>
+        <div id="ai-upsell-text" style="font-size:0.84rem;font-weight:700;color:var(--text);"></div>
+      </div>
+      <button id="ai-upsell-btn" class="add-btn" style="padding:6px 12px;font-size:0.78rem;">+ Add</button>
+    </div>
 
     <div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--border);">
       <div style="display:flex;justify-content:space-between;font-size:0.86rem;color:var(--muted);margin-bottom:6px;">
         <span>UPI Gateway Fee (0% MDR)</span>
         <span style="color:var(--ok);font-weight:700;">₹0.00</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:1.25rem;font-weight:800;color:var(--gold-light);">
+      <div style="display:flex;justify-content:space-between;font-size:1.25rem;font-weight:800;color:var(--text);">
         <span>Total Payable</span>
-        <span id="cart-total">₹0</span>
+        <span id="cart-total" style="color:var(--gold-dark);">₹0</span>
       </div>
     </div>
 
@@ -176,20 +264,20 @@
 <div id="pay-modal" class="modal">
   <div class="modal-card">
     <div id="st-pending">
-      <div style="color:var(--gold);font-weight:800;font-size:0.78rem;letter-spacing:1px;">LOCKED DYNAMIC UPI QR • 0% MDR</div>
-      <h2 id="m-amt" style="font-size:2rem;color:#fff;margin:6px 0;">₹0</h2>
+      <div style="color:var(--gold-dark);font-weight:800;font-size:0.78rem;letter-spacing:1px;">LOCKED DYNAMIC UPI QR • 0% MDR</div>
+      <h2 id="m-amt" style="font-size:2rem;color:var(--text);margin:6px 0;">₹0</h2>
       <p style="color:var(--muted);font-size:0.84rem;margin-bottom:12px;">
         Scan with PhonePe / GPay / Paytm.<br>Receipt prints <b>ONLY</b> after bank confirms payment.<br>
-        Time left: <b id="m-timer" style="color:var(--gold);">90s</b>
+        Time left: <b id="m-timer" style="color:var(--gold-dark);">90s</b>
       </p>
-      <div style="background:#fff;padding:14px;border-radius:16px;display:inline-block;margin-bottom:10px;">
+      <div style="background:#FAF8F5;padding:14px;border-radius:16px;border:1px solid var(--border);display:inline-block;margin-bottom:10px;">
         <img id="m-qr" src="" alt="Dynamic UPI QR" style="width:195px;height:195px;display:block;">
       </div>
       <div style="font-size:0.76rem;color:var(--muted);margin-bottom:14px;">
-        Payee: <b style="color:var(--gold-light);">D GANI CAFE (Q227869939@ybl)</b><br>
+        Payee: <b style="color:var(--text);">D GANI CAFE (Q227869939@ybl)</b><br>
         Order ID: <span id="m-oid"></span>
       </div>
-      <button onclick="cancelPayment()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.85rem;">Cancel Order</button>
+      <button onclick="cancelPayment()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:0.85rem;font-weight:700;">Cancel Order</button>
     </div>
 
     <div id="st-failed" style="display:none;">
@@ -199,15 +287,15 @@
         Payment failed or timed out. <b>No receipt was printed.</b> Please try again.
       </p>
       <button class="pay-btn" onclick="startPayment()">🔄 Do Again (Retry Payment)</button>
-      <button onclick="cancelPayment()" style="margin-top:12px;background:none;border:none;color:var(--muted);cursor:pointer;">Back to Menu</button>
+      <button onclick="cancelPayment()" style="margin-top:12px;background:none;border:none;color:var(--muted);cursor:pointer;font-weight:700;">Back to Menu</button>
     </div>
 
     <div id="st-success" style="display:none;">
       <div style="font-size:3rem;margin-bottom:8px;">✅</div>
       <h2 style="color:var(--ok);margin-bottom:6px;">Payment Verified!</h2>
-      <div style="font-size:1.5rem;font-weight:800;color:var(--gold);margin-bottom:8px;">Token #<span id="s-token">101</span></div>
+      <div style="font-size:1.5rem;font-weight:800;color:var(--gold-dark);margin-bottom:8px;">Token #<span id="s-token">101</span></div>
       <p style="color:var(--muted);font-size:0.86rem;margin-bottom:14px;">Your 80mm receipt is printing automatically.<br>Please collect your order when called on the TV screen.</p>
-      <a href="https://g.page/r/hyderabad-chai-company/review" target="_blank" style="display:inline-block;background:var(--gold);color:#000;font-weight:800;padding:10px 18px;border-radius:10px;text-decoration:none;font-size:0.84rem;">
+      <a href="https://g.page/r/hyderabad-chai-company/review" target="_blank" style="display:inline-block;background:var(--gold);color:#fff;font-weight:800;padding:10px 18px;border-radius:10px;text-decoration:none;font-size:0.84rem;">
         ⭐ Tap to Rate 5-Stars on Google
       </a>
     </div>
@@ -235,11 +323,11 @@
 </div>
 
 <script>
-  // LIVE FIREBASE CONFIG (hyderabadchaicompany-c245a)
+  // EXACT LIVE FIREBASE CONFIG (asia-southeast1 with https://)
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyAPHyMSTPIM49-ncoA5bj7qia-zzTppw98",
     authDomain: "hyderabadchaicompany-c245a.firebaseapp.com",
-    databaseURL: "hyderabadchaicompany-c245a-default-rtdb.asia-southeast1.firebasedatabase.app",
+    databaseURL: "https://hyderabadchaicompany-c245a-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "hyderabadchaicompany-c245a",
     storageBucket: "hyderabadchaicompany-c245a.firebasestorage.app",
     messagingSenderId: "236046114005",
@@ -247,26 +335,25 @@
     measurementId: "G-L2DFJD97EG"
   };
 
-  // VERIFIED PHONEPE BUSINESS MERCHANT VPA
   const MERCHANT_UPI_ID = "Q227869939@ybl";
   const MERCHANT_NAME   = "D GANI CAFE";
 
   firebase.initializeApp(FIREBASE_CONFIG);
   const db = firebase.database();
 
-  // Monitor Live Firebase Connection
   db.ref('.info/connected').on('value', snap => {
     const badge = document.getElementById('conn-badge');
     if (snap.val() === true) {
       badge.textContent = '🟢 Firebase Live Sync';
-      badge.style.color = '#22C55E';
+      badge.style.color = '#16A34A';
+      badge.style.background = 'rgba(22,163,74,0.1)';
     } else {
       badge.textContent = '🔴 Reconnecting...';
-      badge.style.color = '#EF4444';
+      badge.style.color = '#DC2626';
+      badge.style.background = 'rgba(220,38,38,0.1)';
     }
   });
 
-  // FULL HYDERABAD CHAI COMPANY MENU WITH IMAGES & RECIPES
   const MENU = [
     { id: 't1', cat: 'Chai & Coffee', name: 'Tea (Single)', te: 'టీ (సింగిల్)', hi: 'चाय (सिंगल)', price: 30, img: 'https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?w=400&q=80', recipe: { milk: 0.08, teaPowder: 0.008, sugar: 0.01 } },
     { id: 't2', cat: 'Chai & Coffee', name: 'Tea (Full)', te: 'టీ (ఫుల్)', hi: 'चाय (फुल)', price: 40, img: 'https://images.unsplash.com/photo-1571934811356-5cc061b6821f?w=400&q=80', recipe: { milk: 0.14, teaPowder: 0.012, sugar: 0.015 } },
@@ -322,7 +409,6 @@
   let idleTimer = null;
   let alreadyPrintedOrderId = null;
 
-  // Listen for live Sold-Out toggles from Staff KDS
   db.ref('stockStatus').on('value', snap => {
     stockStatus = snap.val() || {};
     renderMenu();
@@ -394,11 +480,33 @@
     }, 0);
   }
 
+  function updateAiUpsell() {
+    const box = document.getElementById('ai-upsell-box');
+    const keys = Object.keys(cart);
+    if (!keys.length) { box.style.display = 'none'; return; }
+    const hasChai = keys.some(id => id.startsWith('t'));
+    const hasSnack = keys.some(id => id.startsWith('s'));
+    let suggestId = null;
+    if (hasChai && !cart['s1'] && stockStatus['s1'] !== false) suggestId = 's1'; // Aloo Samosa
+    else if (hasSnack && !cart['t5'] && stockStatus['t5'] !== false) suggestId = 't5'; // Special Elaichi
+    else if (!cart['s6'] && stockStatus['s6'] !== false) suggestId = 's6'; // Fudgy Brownie
+
+    if (suggestId) {
+      const m = MENU.find(x => x.id === suggestId);
+      document.getElementById('ai-upsell-text').textContent = `${getName(m)} (₹${m.price})`;
+      document.getElementById('ai-upsell-btn').onclick = () => addCart(suggestId);
+      box.style.display = 'flex';
+    } else {
+      box.style.display = 'none';
+    }
+  }
+
   function renderCart() {
     const entries = Object.entries(cart);
     const total = getTotal();
     document.getElementById('cart-total').textContent = '₹' + total;
     document.getElementById('pay-btn').disabled = entries.length === 0;
+    updateAiUpsell();
     if (!entries.length) {
       document.getElementById('cart-list').innerHTML = `<div style="text-align:center;color:var(--muted);padding:28px 8px;">Tap any Chai or Snack to start</div>`;
       return;
@@ -409,7 +517,7 @@
         <div class="cart-row">
           <div>
             <div style="font-weight:700;font-size:0.9rem;">${getName(m)}</div>
-            <div style="font-size:0.78rem;color:var(--gold);">₹${m.price} × ${q} = ₹${m.price * q}</div>
+            <div style="font-size:0.78rem;color:var(--gold-dark);font-weight:700;">₹${m.price} × ${q} = ₹${m.price * q}</div>
           </div>
           <div class="qty-box">
             <button class="qty-btn" onclick="chgQty('${id}',-1)">-</button>
@@ -437,6 +545,7 @@
       orderId: currentOrderId,
       date: new Date().toISOString().slice(0, 10),
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      hour: new Date().getHours(),
       createdAt: Date.now(),
       type: orderType,
       items: itemsPayload,
@@ -487,7 +596,6 @@
     clearInterval(payTimer);
     if (activeOrderRef) activeOrderRef.off();
 
-    // Atomic per-ingredient deduction (zero race conditions during rush hour)
     if (Array.isArray(order.items)) {
       const deductTotals = {};
       order.items.forEach(it => {
@@ -505,7 +613,6 @@
       });
     }
 
-    // Populate 80mm Receipt & Trigger Silent Print
     document.getElementById('pr-token').textContent = order.token || '101';
     document.getElementById('pr-meta').textContent = `${order.date} ${order.time} | ${order.type}`;
     document.getElementById('pr-items').innerHTML = (order.items || []).map(i =>
@@ -544,3 +651,5 @@
 </script>
 </body>
 </html>
+Converting the uploaded commercial video into code
+You may be offline or with limited connectivity. Try downloading instead.
