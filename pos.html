@@ -3,78 +3,86 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hyderabad Chai Company — Staff KDS, Token TV & Admin Console</title>
+<title>Hyderabad Chai Company — Staff KDS, Token TV & AI Admin</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <style>
   :root {
-    --bg: #0B0908; --card: #161311; --gold: #D4AF37; --gold-light: #F3E5AB; --gold-dark: #996515;
-    --amber: #C87D32; --text: #F8F5F0; --muted: #A69B8D; --border: rgba(212, 175, 55, 0.28); --ok: #22C55E; --err: #EF4444;
+    --bg: #FAF8F5; --surface: #FFFFFF; --soft: #F3EFE8; --gold: #C89B3C; --gold-dark: #9A721E;
+    --amber: #D97706; --text: #1C1917; --muted: #6B6258; --border: #E7E0D4; --ok: #16A34A; --err: #DC2626;
+    --shadow: 0 6px 20px rgba(28, 25, 23, 0.05);
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; min-height: 100vh; }
   h1, h2, .brand-font { font-family: 'Cinzel', serif; }
 
   header {
-    position: sticky; top: 0; z-index: 100; background: rgba(11,9,8,0.95); backdrop-filter: blur(12px);
+    position: sticky; top: 0; z-index: 100; background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--border); padding: 12px 22px;
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
   }
   .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
-  .tab-btn { background: #1B1714; color: var(--muted); border: 1px solid var(--border); padding: 9px 15px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
-  .tab-btn.active { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #0B0908; }
-  .dev-link { color: var(--gold-light); border: 1px solid var(--border); background: rgba(212,175,55,0.12); padding: 7px 12px; border-radius: 20px; font-size: 0.78rem; text-decoration: none; font-weight: 700; }
+  .tab-btn { background: var(--soft); color: var(--muted); border: 1px solid var(--border); padding: 9px 15px; border-radius: 10px; font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+  .tab-btn.active { background: var(--text); color: #FFFFFF; border-color: var(--text); }
+  .dev-link { color: var(--gold-dark); border: 1px solid var(--gold); background: #FFFBF0; padding: 7px 12px; border-radius: 20px; font-size: 0.78rem; text-decoration: none; font-weight: 700; }
 
   section { display: none; max-width: 1440px; margin: 0 auto; padding: 22px; }
   section.active { display: block; }
 
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-bottom: 24px; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
-  .kpi-val { font-size: 1.8rem; font-weight: 800; color: var(--gold); margin-top: 6px; }
-  .btn-primary { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #0B0908; border: none; padding: 11px 16px; border-radius: 10px; font-weight: 800; cursor: pointer; width: 100%; }
-  .btn-ok { background: var(--ok); color: #000; border: none; padding: 9px 14px; border-radius: 8px; font-weight: 800; cursor: pointer; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px; box-shadow: var(--shadow); }
+  .kpi-val { font-size: 1.85rem; font-weight: 800; color: var(--gold-dark); margin-top: 6px; }
+  .ai-banner {
+    background: linear-gradient(135deg, #FFFDF7, #F7EFE0); border: 1.5px solid var(--gold);
+    border-radius: 16px; padding: 18px; margin-bottom: 22px;
+  }
+  .bar-bg { width: 100%; height: 10px; background: var(--soft); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+  .bar-fill { height: 100%; border-radius: 99px; transition: width 0.3s; }
+
+  .btn-primary { background: linear-gradient(135deg, var(--gold), var(--gold-dark)); color: #FFFFFF; border: none; padding: 11px 16px; border-radius: 10px; font-weight: 800; cursor: pointer; width: 100%; }
+  .btn-ok { background: var(--ok); color: #fff; border: none; padding: 9px 14px; border-radius: 8px; font-weight: 800; cursor: pointer; }
   .btn-err { background: var(--err); color: #fff; border: none; padding: 9px 14px; border-radius: 8px; font-weight: 800; cursor: pointer; }
 
-  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 12px; overflow: hidden; }
-  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.88rem; }
-  th { background: #211B16; color: var(--gold-light); }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.88rem; }
+  th { background: var(--soft); color: var(--text); font-weight: 800; }
 </style>
 </head>
 <body>
 
 <header>
   <div>
-    <div class="brand-font" style="font-weight:800;color:var(--gold);font-size:1.1rem;">HYDERABAD CHAI COMPANY — OPERATIONS</div>
-    <div style="font-size:0.75rem;color:var(--muted);">Staff KDS • Live Token TV • Owner Analytics • <span id="sync-status" style="color:var(--ok);">Connecting...</span></div>
+    <div class="brand-font" style="font-weight:800;color:var(--text);font-size:1.1rem;">HYDERABAD CHAI COMPANY — OPERATIONS</div>
+    <div style="font-size:0.75rem;color:var(--muted);">Staff KDS • Live Token TV • AI Owner Command • <span id="sync-status" style="font-weight:700;">Connecting...</span></div>
   </div>
   <div class="tabs">
     <button class="tab-btn active" onclick="openTab('kds', this)">🔥 Kitchen & Staff KDS</button>
     <button class="tab-btn" onclick="openTab('tv', this)">📺 Live Token TV</button>
-    <button class="tab-btn" onclick="openTab('admin', this)">📊 Owner Admin & Excel</button>
+    <button class="tab-btn" onclick="openTab('admin', this)">🤖 AI Admin & Inventory</button>
   </div>
   <a class="dev-link" href="https://catb12345612-ai.github.io/Syed-Zeeshaan-Ali-High-Fledged-Engineering-And-Digital-Tech-Solutions-Site/" target="_blank">⚡ Developed by @syedzeeshaanali07</a>
 </header>
 
 <!-- 1. STAFF & KITCHEN KDS -->
 <section id="tab-kds" class="active">
-  <h2 style="color:var(--gold);margin-bottom:12px;">🔥 Active Kitchen Orders (Verified Paid Only)</h2>
+  <h2 style="color:var(--text);margin-bottom:12px;">🔥 Active Kitchen Orders (Verified Paid Only)</h2>
   <div id="kds-paid-grid" class="grid"></div>
 
-  <h3 style="color:var(--amber);margin:20px 0 12px;">⏳ Pending UPI Payments (Manual Counter Override Fallback)</h3>
-  <p style="color:var(--muted);font-size:0.84rem;margin-bottom:12px;">If a customer paid on your PhonePe Soundbox (<b>Q227869939@ybl</b>) and webhook is delayed, tap <b>Approve & Print</b> to instantly unlock their Kiosk receipt.</p>
+  <h3 style="color:var(--amber);margin:20px 0 8px;">⏳ Pending UPI Payments (Manual Counter Fallback)</h3>
+  <p style="color:var(--muted);font-size:0.84rem;margin-bottom:12px;">If customer paid on PhonePe Soundbox (<b>Q227869939@ybl</b>) and webhook lags, tap <b>Approve & Print</b> to instantly unlock their Kiosk receipt.</p>
   <div id="kds-pending-grid" class="grid"></div>
 
-  <h3 style="color:var(--gold-light);margin:24px 0 12px;">⚡ 1-Tap Peak Hour Stock Control (Syncs to Customer Kiosk)</h3>
+  <h3 style="color:var(--text);margin:24px 0 12px;">⚡ 1-Tap Peak Hour Stock Control (Syncs to Kiosk)</h3>
   <div id="stock-toggle-grid" class="grid"></div>
 </section>
 
 <!-- 2. LIVE TOKEN TV BOARD -->
 <section id="tab-tv">
   <div style="text-align:center;margin-bottom:24px;">
-    <h1 style="color:var(--gold);font-size:2.3rem;">HYDERABAD CHAI COMPANY</h1>
-    <p style="color:var(--muted);font-size:1.05rem;">Please collect your Chai & Snacks when your Token turns GREEN</p>
+    <h1 style="color:var(--text);font-size:2.3rem;">HYDERABAD CHAI COMPANY</h1>
+    <p style="color:var(--muted);font-size:1.05rem;">Please collect your order when your Token moves to READY</p>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
     <div class="card" style="border-color:var(--amber);min-height:360px;">
@@ -88,19 +96,19 @@
   </div>
 </section>
 
-<!-- 3. OWNER ADMIN COMMAND CENTER -->
+<!-- 3. AI OWNER ADMIN COMMAND CENTER -->
 <section id="tab-admin">
   <div id="pin-gate" class="card" style="max-width:400px;margin:40px auto;text-align:center;">
-    <h2 style="color:var(--gold);margin-bottom:8px;">Owner Admin Login</h2>
+    <h2 style="color:var(--text);margin-bottom:8px;">Owner Admin Login</h2>
     <p style="color:var(--muted);font-size:0.86rem;margin-bottom:14px;">Admin PIN: <b>0786</b></p>
-    <input id="pin-inp" type="password" placeholder="Enter PIN" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--gold);background:#0B0908;color:#fff;text-align:center;font-size:1.2rem;margin-bottom:12px;">
-    <button class="btn-primary" onclick="unlockAdmin()">Unlock Command Center</button>
+    <input id="pin-inp" type="password" placeholder="Enter PIN" style="width:100%;padding:12px;border-radius:10px;border:1.5px solid var(--gold);background:var(--bg);color:var(--text);text-align:center;font-size:1.2rem;margin-bottom:12px;">
+    <button class="btn-primary" onclick="unlockAdmin()">Unlock AI Command Center</button>
   </div>
 
   <div id="admin-body" style="display:none;">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
       <div>
-        <h2 style="color:var(--gold);">Owner Daily Sales, Inventory & Firebase Control</h2>
+        <h2 style="color:var(--text);">AI Sales Intelligence, Kitchen Inventory & Firebase Control</h2>
         <p style="color:var(--muted);font-size:0.85rem;">Merchant UPI: <b>Q227869939@ybl (D GANI CAFE)</b> • 0% Gateway Fee</p>
       </div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -109,22 +117,23 @@
       </div>
     </div>
 
+    <!-- AI BUSINESS INSIGHTS PANEL -->
+    <div class="ai-banner">
+      <div style="font-size:0.78rem;font-weight:800;color:var(--gold-dark);letter-spacing:1px;margin-bottom:6px;">🤖 AI LIVE OPERATIONS INSIGHTS</div>
+      <div id="ai-insights-list" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;font-size:0.88rem;color:var(--text);"></div>
+    </div>
+
     <div class="grid">
-      <div class="card"><div style="color:var(--muted);font-size:0.8rem;">TOTAL PAID BILLS TODAY</div><div class="kpi-val" id="k-bills">0</div></div>
-      <div class="card"><div style="color:var(--muted);font-size:0.8rem;">TODAY'S TOTAL REVENUE</div><div class="kpi-val" id="k-rev">₹0</div></div>
-      <div class="card"><div style="color:var(--muted);font-size:0.8rem;">AVERAGE BILL VALUE (AOV)</div><div class="kpi-val" id="k-aov">₹0</div></div>
-      <div class="card"><div style="color:var(--muted);font-size:0.8rem;">GATEWAY FEES SAVED (vs 2%)</div><div class="kpi-val" style="color:var(--ok);" id="k-save">₹0</div></div>
+      <div class="card"><div style="color:var(--muted);font-size:0.8rem;font-weight:700;">TOTAL PAID BILLS TODAY</div><div class="kpi-val" id="k-bills">0</div></div>
+      <div class="card"><div style="color:var(--muted);font-size:0.8rem;font-weight:700;">TODAY'S NET REVENUE</div><div class="kpi-val" id="k-rev">₹0</div></div>
+      <div class="card"><div style="color:var(--muted);font-size:0.8rem;font-weight:700;">AVERAGE BILL VALUE (AOV)</div><div class="kpi-val" id="k-aov">₹0</div></div>
+      <div class="card"><div style="color:var(--muted);font-size:0.8rem;font-weight:700;">GATEWAY FEES SAVED (vs 2%)</div><div class="kpi-val" style="color:var(--ok);" id="k-save">₹0</div></div>
     </div>
 
-    <h3 style="color:var(--gold-light);margin-bottom:10px;">📦 Kitchen Raw-Material Inventory (Auto-Deducted on Every Paid Bill)</h3>
-    <div style="overflow-x:auto;margin-bottom:26px;">
-      <table>
-        <thead><tr><th>Raw Material</th><th>Stock Left</th><th>Unit</th><th>Min Alert</th><th>Status</th><th>Quick Restock</th></tr></thead>
-        <tbody id="inv-body"></tbody>
-      </table>
-    </div>
+    <h3 style="color:var(--text);margin-bottom:10px;">📦 Smart Kitchen Raw-Material Inventory (Visual Health & Servings Left)</h3>
+    <div id="inv-visual-grid" class="grid"></div>
 
-    <h3 style="color:var(--gold-light);margin-bottom:10px;">🧾 Today's Verified Paid Bills</h3>
+    <h3 style="color:var(--text);margin:16px 0 10px;">🧾 Today's Verified Paid Bills Ledger</h3>
     <div style="overflow-x:auto;">
       <table>
         <thead><tr><th>Token</th><th>Time</th><th>Type</th><th>Items</th><th>Amount</th><th>UPI Ref</th></tr></thead>
@@ -135,11 +144,11 @@
 </section>
 
 <script>
-  // LIVE FIREBASE CONFIG (hyderabadchaicompany-c245a)
+  // EXACT LIVE FIREBASE CONFIG (asia-southeast1 with https://)
   const FIREBASE_CONFIG = {
     apiKey: "AIzaSyAPHyMSTPIM49-ncoA5bj7qia-zzTppw98",
     authDomain: "hyderabadchaicompany-c245a.firebaseapp.com",
-    databaseURL: "https://hyderabadchaicompany-c245a-default-rtdb.firebaseio.com",
+    databaseURL: "https://hyderabadchaicompany-c245a-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "hyderabadchaicompany-c245a",
     storageBucket: "hyderabadchaicompany-c245a.firebasestorage.app",
     messagingSenderId: "236046114005",
@@ -155,6 +164,17 @@
     { id: 'g7', name: 'Paneer Burger' }, { id: 'b2', name: 'Mumbai Poha' }
   ];
 
+  // Servings yield per unit for AI capacity calculation
+  const YIELD_MAP = {
+    milk: { perServing: 0.14, label: 'Full Chai Cups' },
+    teaPowder: { perServing: 0.012, label: 'Chai Cups' },
+    sugar: { perServing: 0.015, label: 'Chai Cups' },
+    samosaPieces: { perServing: 1, label: 'Samosas' },
+    pavBuns: { perServing: 1, label: 'Vada Pav / Burgers' },
+    breadSlices: { perServing: 2, label: 'Sandwiches' },
+    brownies: { perServing: 1, label: 'Brownies' }
+  };
+
   firebase.initializeApp(FIREBASE_CONFIG);
   const db = firebase.database();
 
@@ -164,7 +184,6 @@
   let stockMap = {};
   let inventory = {};
 
-  // Kitchen chime for newly paid orders
   function playChime() {
     try {
       const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -183,7 +202,7 @@
   db.ref('.info/connected').on('value', s => {
     const el = document.getElementById('sync-status');
     el.textContent = s.val() ? '🟢 Firebase Live' : '🔴 Reconnecting...';
-    el.style.color = s.val() ? '#22C55E' : '#EF4444';
+    el.style.color = s.val() ? '#16A34A' : '#DC2626';
   });
 
   db.ref('orders').on('value', s => {
@@ -202,7 +221,7 @@
   });
 
   db.ref('stockStatus').on('value', s => { stockMap = s.val() || {}; renderStockToggles(); });
-  db.ref('inventory').on('value', s => { inventory = s.val() || {}; renderInventory(); });
+  db.ref('inventory').on('value', s => { inventory = s.val() || {}; renderInventory(); renderAiInsights(); });
 
   function openTab(id, btn) {
     document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
@@ -231,23 +250,10 @@
     });
   }
 
-  function rejectPendingOrder(orderId) {
-    db.ref('orders/' + orderId).update({ status: 'FAILED' });
-  }
-
-  function advanceOrder(orderId, currentKds) {
-    const next = currentKds === 'PREPARING' ? 'READY' : 'COMPLETED';
-    db.ref('orders/' + orderId).update({ kdsStatus: next });
-  }
-
-  function toggleStock(id) {
-    const next = stockMap[id] === false ? true : false;
-    db.ref('stockStatus/' + id).set(next);
-  }
-
-  function restock(k) {
-    db.ref('inventory/' + k + '/qty').transaction(cur => +((cur || 0) + 10).toFixed(2));
-  }
+  function rejectPendingOrder(orderId) { db.ref('orders/' + orderId).update({ status: 'FAILED' }); }
+  function advanceOrder(orderId, cur) { db.ref('orders/' + orderId).update({ kdsStatus: cur === 'PREPARING' ? 'READY' : 'COMPLETED' }); }
+  function toggleStock(id) { db.ref('stockStatus/' + id).set(stockMap[id] === false ? true : false); }
+  function restock(k, amt) { db.ref('inventory/' + k + '/qty').transaction(cur => +((cur || 0) + amt).toFixed(2)); }
 
   function renderStockToggles() {
     document.getElementById('stock-toggle-grid').innerHTML = QUICK_STOCK_ITEMS.map(it => {
@@ -264,19 +270,47 @@
   }
 
   function renderInventory() {
-    document.getElementById('inv-body').innerHTML = Object.entries(inventory).map(([k, v]) => {
-      const low = v.qty <= v.min;
+    document.getElementById('inv-visual-grid').innerHTML = Object.entries(inventory).map(([k, v]) => {
+      const par = (v.min || 10) * 4;
+      const pct = Math.min(100, Math.round((v.qty / par) * 100));
+      const color = v.qty <= v.min ? '#DC2626' : (pct < 45 ? '#D97706' : '#16A34A');
+      const y = YIELD_MAP[k];
+      const estServings = y ? Math.floor(v.qty / y.perServing) : null;
       return `
-        <tr>
-          <td><strong>${v.label}</strong></td>
-          <td>${v.qty}</td>
-          <td>${v.unit}</td>
-          <td>${v.min} ${v.unit}</td>
-          <td style="color:${low ? 'var(--err)' : 'var(--ok)'};font-weight:700;">${low ? '⚠️ LOW STOCK' : '✅ Healthy'}</td>
-          <td><button class="btn-ok" style="padding:6px 10px;font-size:0.78rem;" onclick="restock('${k}')">+10 ${v.unit}</button></td>
-        </tr>
+        <div class="card" style="border-left:4px solid ${color};">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <strong style="font-size:0.95rem;">${v.label}</strong>
+            <span style="font-size:0.74rem;font-weight:800;color:${color};">${v.qty <= v.min ? '⚠️ LOW' : '✅ OK'}</span>
+          </div>
+          <div style="font-size:1.45rem;font-weight:800;margin:6px 0 2px;">${v.qty} <span style="font-size:0.85rem;color:var(--muted);">${v.unit}</span></div>
+          ${estServings !== null ? `<div style="font-size:0.78rem;color:var(--gold-dark);font-weight:700;">≈ ${estServings} ${y.label} remaining</div>` : ''}
+          <div class="bar-bg"><div class="bar-fill" style="width:${pct}%;background:${color};"></div></div>
+          <div style="display:flex;gap:8px;margin-top:12px;">
+            <button class="btn-ok" style="flex:1;padding:6px;font-size:0.76rem;" onclick="restock('${k}', 5)">+5 ${v.unit}</button>
+            <button class="btn-ok" style="flex:1;padding:6px;font-size:0.76rem;background:#1C1917;" onclick="restock('${k}', 20)">+20 ${v.unit}</button>
+          </div>
+        </div>
       `;
     }).join('');
+  }
+
+  function renderAiInsights() {
+    const paid = allOrders.filter(o => o.status === 'PAID');
+    const itemCounts = {};
+    const hourCounts = {};
+    paid.forEach(o => {
+      if (o.hour !== undefined) hourCounts[o.hour] = (hourCounts[o.hour] || 0) + 1;
+      (o.items || []).forEach(i => { itemCounts[i.name] = (itemCounts[i.name] || 0) + i.qty; });
+    });
+    const topItem = Object.entries(itemCounts).sort((a,b) => b[1] - a[1])[0];
+    const peakHr = Object.entries(hourCounts).sort((a,b) => b[1] - a[1])[0];
+    const lowItems = Object.values(inventory).filter(v => v.qty <= v.min).map(v => v.label);
+
+    document.getElementById('ai-insights-list').innerHTML = `
+      <div><b>⭐ Star Bestseller:</b> ${topItem ? `${topItem[0]} (${topItem[1]} sold)` : 'Waiting for today’s first paid bill'}</div>
+      <div><b>⏰ Peak Rush Hour:</b> ${peakHr ? `${peakHr[0]}:00 – ${+peakHr[0]+1}:00 (${peakHr[1]} bills)` : 'Tracking live...'}</div>
+      <div><b>📦 Restock Alert:</b> ${lowItems.length ? `<span style="color:var(--err);font-weight:700;">${lowItems.join(', ')}</span>` : '<span style="color:var(--ok);font-weight:700;">All kitchen stock healthy</span>'}</div>
+    `;
   }
 
   function renderAll() {
@@ -287,7 +321,7 @@
     document.getElementById('kds-paid-grid').innerHTML = activeKds.length ? activeKds.map(o => `
       <div class="card" style="border-color:${o.kdsStatus === 'READY' ? 'var(--ok)' : 'var(--gold)'};">
         <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
-          <strong style="font-size:1.35rem;color:var(--gold);">Token #${o.token}</strong>
+          <strong style="font-size:1.35rem;color:var(--gold-dark);">Token #${o.token}</strong>
           <span style="font-size:0.78rem;color:var(--muted);">${o.type} • ${o.time}</span>
         </div>
         <div style="margin-bottom:12px;">${(o.items || []).map(i => `<div><b>${i.qty}×</b> ${i.name}</div>`).join('')}</div>
@@ -301,7 +335,7 @@
       <div class="card" style="border-color:var(--amber);">
         <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
           <strong>${o.orderId}</strong>
-          <strong style="color:var(--gold);">₹${o.total}</strong>
+          <strong style="color:var(--gold-dark);">₹${o.total}</strong>
         </div>
         <div style="font-size:0.84rem;color:var(--muted);margin-bottom:12px;">${(o.items || []).map(i => `${i.qty}x ${i.name}`).join(', ')}</div>
         <div style="display:flex;gap:8px;">
@@ -312,16 +346,15 @@
     `).join('') : `<div class="card" style="color:var(--muted);">No pending UPI scans right now.</div>`;
 
     document.getElementById('tv-prep').innerHTML = paidOrders.filter(o => o.kdsStatus === 'PREPARING')
-      .map(o => `<div style="background:#261D15;border:2px solid var(--amber);padding:16px 26px;border-radius:14px;font-size:2.1rem;font-weight:800;">#${o.token}</div>`).join('');
+      .map(o => `<div style="background:#FFFBEB;border:2px solid var(--amber);color:var(--amber);padding:16px 26px;border-radius:14px;font-size:2.1rem;font-weight:800;">#${o.token}</div>`).join('');
     document.getElementById('tv-ready').innerHTML = paidOrders.filter(o => o.kdsStatus === 'READY')
-      .map(o => `<div style="background:#132A1C;border:2px solid var(--ok);color:var(--ok);padding:16px 26px;border-radius:14px;font-size:2.1rem;font-weight:800;">#${o.token}</div>`).join('');
+      .map(o => `<div style="background:#F0FDF4;border:2px solid var(--ok);color:var(--ok);padding:16px 26px;border-radius:14px;font-size:2.1rem;font-weight:800;">#${o.token}</div>`).join('');
 
     const bills = paidOrders.length;
     const rev = paidOrders.reduce((s, o) => s + (o.total || 0), 0);
-    const aov = bills ? (rev / bills).toFixed(2) : '0.00';
     document.getElementById('k-bills').textContent = bills;
     document.getElementById('k-rev').textContent = '₹' + rev;
-    document.getElementById('k-aov').textContent = '₹' + aov;
+    document.getElementById('k-aov').textContent = '₹' + (bills ? (rev / bills).toFixed(2) : '0.00');
     document.getElementById('k-save').textContent = '₹' + (rev * 0.02).toFixed(2);
 
     document.getElementById('bills-body').innerHTML = paidOrders.map(o => `
@@ -331,12 +364,13 @@
         <td>${o.type}</td>
         <td>${(o.items || []).map(i => `${i.qty}x ${i.name}`).join(', ')}</td>
         <td><strong>₹${o.total}</strong></td>
-        <td style="color:var(--ok);">${o.utr || 'VERIFIED'}</td>
+        <td style="color:var(--ok);font-weight:700;">${o.utr || 'VERIFIED'}</td>
       </tr>
     `).join('');
 
     renderStockToggles();
     renderInventory();
+    renderAiInsights();
   }
 
   function downloadExcel() {
@@ -364,3 +398,5 @@
 </script>
 </body>
 </html>
+Converting the uploaded commercial video into code
+You may be offline or with limited connectivity. Try downloading instead.
